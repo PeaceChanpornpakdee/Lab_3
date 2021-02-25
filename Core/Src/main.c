@@ -283,8 +283,8 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-ADC_ChannelConfTypeDef sConfig[3];
-uint32_t Data[3];
+//ADC_ChannelConfTypeDef sConfig[3];
+//uint32_t Data[3];
 
 void ADCPollingInit()
 {
