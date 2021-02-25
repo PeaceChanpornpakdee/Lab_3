@@ -51,7 +51,11 @@ typedef struct
 	uint32_t Data;
 }ADCStructure;
 
-ADCStructure ADCChannel[3] = {0};
+ADCStructure ADCChannel[2] = {0};
+
+uint32_t ADCOutputConverted = 0;
+uint8_t	 ADCMode = 0;
+float 	 Calculate = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -102,7 +106,8 @@ int main(void)
   /* USER CODE BEGIN 2 */
   //---------------------------------------------------------------------------
   ADCPollingInit();
-
+  GPIO_PinState SwitchState[2]; 	//Now, Previous
+  uint32_t SampleTimeStamp = 0;
   //---------------------------------------------------------------------------
   /* USER CODE END 2 */
 
@@ -113,6 +118,37 @@ int main(void)
   {
 	  ADCPollingUpdate();
 
+	  if(ADCMode == 0)
+	  {
+		  ADCOutputConverted = ADCChannel[0].Data * 3300 / 4096;
+	  }
+
+	  else
+	  {
+		  Calculate = (ADCChannel[1].Data * 3.3 / 4096 - 0.76) * 400;
+		  ADCOutputConverted = Calculate + 25;
+	  }
+
+
+	  if(HAL_GetTick() - SampleTimeStamp >= 100)
+	  {
+		  SampleTimeStamp = HAL_GetTick();
+
+		  SwitchState[0] = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13);
+
+		  if(SwitchState[0] == GPIO_PIN_SET && SwitchState[1] == GPIO_PIN_RESET)  // SET = no , RESET = press
+		  {
+			  if(ADCMode == 0)
+			  {
+				  ADCMode = 1;
+			  }
+			  else
+			  {
+				  ADCMode = 0;;
+			  }
+		  }
+		  SwitchState[1] = SwitchState[0];
+	  }
 
 
   //---------------------------------------------------------------------------
@@ -268,11 +304,11 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin : B1_Pin */
-  GPIO_InitStruct.Pin = B1_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  /*Configure GPIO pin : PC13 */
+  GPIO_InitStruct.Pin = GPIO_PIN_13;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pin : LD2_Pin */
   GPIO_InitStruct.Pin = LD2_Pin;
@@ -284,6 +320,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+//---------------------------------------------------------------------------
 void ADCPollingInit()
 {
 	//PA0 - ADC IN0
@@ -291,40 +328,32 @@ void ADCPollingInit()
 	ADCChannel[0].Config.Rank = 1;
 	ADCChannel[0].Config.SamplingTime = ADC_SAMPLETIME_3CYCLES;
 
-	//PA1 - ADC IN1
-	ADCChannel[1].Config.Channel = ADC_CHANNEL_1;
-	ADCChannel[1].Config.Rank = 1;
-	ADCChannel[1].Config.SamplingTime = ADC_SAMPLETIME_3CYCLES;
 
 	//Temp
-	ADCChannel[2].Config.Channel = ADC_CHANNEL_TEMPSENSOR;
-	ADCChannel[2].Config.Rank = 1;
-	ADCChannel[2].Config.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+	ADCChannel[1].Config.Channel = ADC_CHANNEL_TEMPSENSOR;
+	ADCChannel[1].Config.Rank = 1;
+	ADCChannel[1].Config.SamplingTime = ADC_SAMPLETIME_3CYCLES;
 }
 
 void ADCPollingUpdate()
 {
-	for(int i =0; i < 3; i++)
+	//Select Channel
+	HAL_ADC_ConfigChannel(&hadc1, &ADCChannel[ADCMode].Config);
+
+	//ADC Sampling , Convert
+	HAL_ADC_Start(&hadc1);
+
+	//Wait ADC
+	if(HAL_ADC_PollForConversion(&hadc1, 10) == HAL_OK) //ms
 	{
-		//Select Channel
-		HAL_ADC_ConfigChannel(&hadc1, &ADCChannel[i].Config);
-
-		//ADC Sampling , Convert
-		HAL_ADC_Start(&hadc1);
-
-		//Wait ADC
-		if(HAL_ADC_PollForConversion(&hadc1, 10) == HAL_OK) //ms
-		{
-			//Get Value
-			ADCChannel[i].Data = HAL_ADC_GetValue(&hadc1);
-		}
-
-		//Stop
-		HAL_ADC_Stop(&hadc1);
-
+		//Get Value
+		ADCChannel[ADCMode].Data = HAL_ADC_GetValue(&hadc1);
 	}
-}
 
+	//Stop
+	HAL_ADC_Stop(&hadc1);
+}
+//---------------------------------------------------------------------------
 /* USER CODE END 4 */
 
 /**
