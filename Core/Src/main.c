@@ -62,7 +62,6 @@ static void MX_ADC1_Init(void);
 /* USER CODE BEGIN PFP */
 void ADCPollingInit();		//Init Config of 3 ADc
 void ADCPollingUpdate(); 	//Read ADC from 3 sources (In0, In1, Temp)
-
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -101,8 +100,10 @@ int main(void)
   MX_USART2_UART_Init();
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
+  //---------------------------------------------------------------------------
   ADCPollingInit();
 
+  //---------------------------------------------------------------------------
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -283,9 +284,6 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-//ADC_ChannelConfTypeDef sConfig[3];
-//uint32_t Data[3];
-
 void ADCPollingInit()
 {
 	//PA0 - ADC IN0
